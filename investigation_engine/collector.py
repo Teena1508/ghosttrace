@@ -65,7 +65,7 @@ class LiveDeviceCollector:
     def _count_active_sockets(self) -> int:
         """Counts active listening and established sockets."""
         try:
-            out = subprocess.check_output(["netstat", "-an"], text=True, stderr=subprocess.DEVNULL)
+            out = subprocess.check_output(["netstat", "-an"], text=True, stderr=subprocess.DEVNULL, timeout=2)
             return sum(1 for line in out.splitlines() if "LISTEN" in line or "ESTABLISHED" in line)
         except Exception:
             return 0
@@ -192,6 +192,7 @@ class LiveDeviceCollector:
                 ["netstat", "-an", "-p", "tcp"],
                 text=True,
                 stderr=subprocess.DEVNULL,
+                timeout=2,
             )
         except Exception:
             return events

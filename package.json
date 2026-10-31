@@ -1,0 +1,15 @@
+{
+  "name": "ghosttrace-platform",
+  "version": "0.1.0",
+  "description": "GhostTrace Defensive Cybersecurity Forensic Platform",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "lint": "npm --prefix frontend run lint",
+    "backend": "python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "start": "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
+  }
+}
+

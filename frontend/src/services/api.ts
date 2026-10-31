@@ -10,29 +10,43 @@ import type {
   SecurityEvent,
 } from '../types/event';
 
-const BACKEND_DIRECT_URL = 'http://127.0.0.1:8000';
+const ENV_API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const BACKEND_DIRECT_URL = ENV_API_URL || (isLocalhost ? 'http://127.0.0.1:8000' : '');
+
+function resolveUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const cleanPath = path.startsWith('/') ? path : '/' + path;
+  if (ENV_API_URL) {
+    return ENV_API_URL + cleanPath;
+  }
+  return cleanPath;
+}
 
 /**
  * Resilient fetch client with automatic direct backend fallback
  * in case development server proxy returns 502/504 or network error.
  */
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const url = resolveUrl(path);
   try {
-    const res = await fetch(path, init);
-    if ((res.status === 502 || res.status === 504) && !path.startsWith('http')) {
-      const directUrl = `${BACKEND_DIRECT_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+    const res = await fetch(url, init);
+    if ((res.status === 502 || res.status === 504) && !url.startsWith('http') && BACKEND_DIRECT_URL) {
+      const directUrl = BACKEND_DIRECT_URL + (path.startsWith('/') ? '' : '/') + path;
       return await fetch(directUrl, init);
     }
     return res;
   } catch (err) {
-    if (!path.startsWith('http')) {
-      const directUrl = `${BACKEND_DIRECT_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+    if (!url.startsWith('http') && BACKEND_DIRECT_URL) {
+      const directUrl = BACKEND_DIRECT_URL + (path.startsWith('/') ? '' : '/') + path;
       return await fetch(directUrl, init);
     }
     throw err;
   }
 }
-
 export async function fetchHealth(): Promise<HealthResponse> {
   const res = await apiFetch(`/health`);
   if (!res.ok) {

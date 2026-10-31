@@ -1,30 +1,49 @@
 #!/bin/bash
-# GhostTrace Auto-Restart Backend Launcher
-# Keeps backend online — restarts automatically on crash.
+# GhostTrace All-in-One Launcher (macOS / Linux)
+# Automatically ensures Python dependencies, starts backend in background with keep-alive,
+# and starts the frontend dev server.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "🔴 GhostTrace Backend Keep-Alive Launcher"
-echo "   Working dir: $SCRIPT_DIR"
-echo "   Press Ctrl+C to stop."
-echo ""
+echo "=============================================="
+echo "  🚀 GhostTrace All-in-One Launcher"
+echo "=============================================="
 
-while true; do
-  echo "[$(date '+%H:%M:%S')] ▶ Starting backend on port 8000..."
-  .venv/bin/python3 -m uvicorn backend.app.main:app \
-    --host 0.0.0.0 \
-    --port 8000 \
-    --reload \
-    --log-level info
+# Detect Python binary
+if [ -f ".venv/bin/python3" ]; then
+  PYTHON_CMD=".venv/bin/python3"
+elif command -v python3 &>/dev/null; then
+  PYTHON_CMD="python3"
+elif command -v python &>/dev/null; then
+  PYTHON_CMD="python"
+else
+  echo "❌ Error: Python 3 not found. Please install Python 3.10+."
+  exit 1
+fi
 
-  EXIT_CODE=$?
-  if [ $EXIT_CODE -eq 0 ]; then
-    echo "[$(date '+%H:%M:%S')] ✅ Backend stopped cleanly. Exiting."
-    break
-  else
-    echo "[$(date '+%H:%M:%S')] ⚠️  Backend exited with code $EXIT_CODE. Restarting in 3s..."
-    sleep 3
-  fi
-done
+echo "✔ Using Python: $($PYTHON_CMD --version)"
 
+# Check if backend is already listening on port 8000
+if curl -s http://127.0.0.1:8000/health &>/dev/null; then
+  echo "✔ Backend is already running on http://127.0.0.1:8000"
+else
+  echo "▶ Starting backend supervisor on port 8000..."
+  (
+    while true; do
+      $PYTHON_CMD -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload --log-level info
+      EXIT_CODE=$?
+      if [ $EXIT_CODE -eq 0 ]; then
+        break
+      fi
+      echo "⚠️  Backend exited ($EXIT_CODE). Auto-restarting in 2s..."
+      sleep 2
+    done
+  ) &
+  BACKEND_PID=$!
+  trap "kill $BACKEND_PID 2>/dev/null" EXIT
+fi
+
+# Start frontend
+echo "▶ Starting frontend..."
+npm --prefix frontend run dev
