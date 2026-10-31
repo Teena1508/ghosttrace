@@ -1,0 +1,95 @@
+{
+  "dataset_metadata": {
+    "name": "Scenario 2: Routine Administrative Operations Baseline",
+    "version": "1.0.0",
+    "environment": "Simulated Enterprise Fictional Lab (SIM-CORP)",
+    "description": "Clean benchmark dataset representing authorized developer and system operations with no active threats.",
+    "is_fictional": true
+  },
+  "events": [
+    {
+      "event_id": "rtn-auth-01",
+      "source_event_id": "authlog-10021",
+      "timestamp": "2026-10-18T08:00:15Z",
+      "event_type": "AUTHENTICATION",
+      "host_id": "dev-wkstn-42.sim.local",
+      "user_id": "alice.chen",
+      "source_ip": "10.0.1.25",
+      "session_id": "sess-dev-01",
+      "process_id": 1210,
+      "severity": "INFORMATIONAL",
+      "source": "simulated_auth_log",
+      "action": "LOGON_SUCCESS",
+      "is_suspicious": false,
+      "description": "Routine interactive public-key SSH login by authorized engineer",
+      "original_event_data": {
+        "RecordNumber": 10021,
+        "message": "Accepted publickey for alice.chen from 10.0.1.25 port 49120 ssh2",
+        "user": "alice.chen"
+      }
+    },
+    {
+      "event_id": "rtn-proc-02",
+      "source_event_id": "sysmon-3012",
+      "timestamp": "2026-10-18T08:05:00Z",
+      "event_type": "PROCESS_EXECUTION",
+      "host_id": "dev-wkstn-42.sim.local",
+      "user_id": "alice.chen",
+      "session_id": "sess-dev-01",
+      "process_id": 1340,
+      "process_name": "git",
+      "command_line": "git pull origin main",
+      "severity": "INFORMATIONAL",
+      "source": "simulated_sysmon",
+      "action": "PROCESS_CREATE",
+      "is_suspicious": false,
+      "description": "Routine Git version control repository synchronization",
+      "original_event_data": {
+        "ProcessId": 1340,
+        "CommandLine": "git pull origin main",
+        "ParentProcessId": 1210
+      }
+    },
+    {
+      "event_id": "rtn-file-03",
+      "source_event_id": "auditd-7712",
+      "timestamp": "2026-10-18T08:06:22Z",
+      "event_type": "FILE_AUDIT",
+      "host_id": "dev-wkstn-42.sim.local",
+      "user_id": "alice.chen",
+      "session_id": "sess-dev-01",
+      "process_id": 1340,
+      "file_path": "/home/alice.chen/projects/ghost/README.md",
+      "severity": "INFORMATIONAL",
+      "source": "simulated_auditd",
+      "action": "FILE_READ",
+      "is_suspicious": false,
+      "description": "Routine workspace documentation file access",
+      "original_event_data": {
+        "syscall": 257,
+        "name": "/home/alice.chen/projects/ghost/README.md",
+        "ouid": 1001
+      }
+    },
+    {
+      "event_id": "rtn-proc-04",
+      "source_event_id": "sysmon-3099",
+      "timestamp": "2026-10-18T08:30:00Z",
+      "event_type": "PROCESS_EXECUTION",
+      "host_id": "corp-dc01.sim.local",
+      "user_id": "root",
+      "process_id": 501,
+      "process_name": "logrotate",
+      "command_line": "/usr/sbin/logrotate /etc/logrotate.conf",
+      "severity": "INFORMATIONAL",
+      "source": "simulated_sysmon",
+      "action": "PROCESS_CREATE",
+      "is_suspicious": false,
+      "description": "Scheduled system log rotation daemon execution",
+      "original_event_data": {
+        "ProcessId": 501,
+        "CommandLine": "/usr/sbin/logrotate /etc/logrotate.conf"
+      }
+    }
+  ]
+}

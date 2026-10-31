@@ -1,0 +1,68 @@
+===================================================================================================================
+  GHOSTTRACE PHASE 6: HIDDEN-ATTACK CHALLENGE & FORENSIC RECONSTRUCTION BENCHMARK
+===================================================================================================================
+Timestamp: 2026-10-19T04:57:01.963032+00:00 | Reproducibility Seed: 42
+Scenarios Evaluated: 7
+-------------------------------------------------------------------------------------------------------------------
+Scenario ID        | Events | EntryPt | Prec  | Rec   | F1    | Order | RelPrec | RelRec | Trace | Restraint | Time(ms)
+-------------------------------------------------------------------------------------------------------------------
+scenario_account_compromise_chain | 5      |  100.0% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.7
+scenario_interleaved_heavy_baseline | 5      |  100.0% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.3
+scenario_multiple_unrelated_incidents | 4      |    0.0% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.2
+scenario_missing_conflicting_identifiers | 2      |    0.0% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.1
+scenario_unusual_egress_exfiltration_restraint | 3      |    0.0% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.2
+scenario_ambiguous_administrative_anomaly | 3      |  100.0% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.1
+scenario_held_out_blind_challenge | 5      |  100.0% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.2
+-------------------------------------------------------------------------------------------------------------------
+MACRO AVERAGE      | -      |   57.1% | 100.0% | 100.0% | 100.0% | 100.0% |  100.0% | 100.0% | 100.0% |    100.0% |      0.2
+===================================================================================================================
+
+SCENARIO BREAKDOWN & QUALITATIVE FINDINGS:
+
+[scenario_account_compromise_chain] Scenario 1: Account Access -> Process Lineage -> Sensitive File Read
+  Execution Time: 0.72 ms | Events: 5 (4 incident, 1 routine)
+  - Entry Point Status: EXACT_MATCH (sc1-evt-02)
+  - Relevant Event Detection: TP=4, FP=0, FN=0
+  - Unsupported Claims: 0 (Proper forensic restraint maintained)
+  - Unrelated Cluster Isolation: 100.0% (None/1 pairs)
+
+[scenario_interleaved_heavy_baseline] Scenario 2: Interleaved Malicious CI Hook with Legitimate Developer Baseline
+  Execution Time: 0.27 ms | Events: 5 (2 incident, 3 routine)
+  - Entry Point Status: EXACT_MATCH (sc2-evt-03)
+  - Relevant Event Detection: TP=2, FP=0, FN=0
+  - Unsupported Claims: 0 (Proper forensic restraint maintained)
+  - Unrelated Cluster Isolation: 100.0% (None/2 pairs)
+
+[scenario_multiple_unrelated_incidents] Scenario 3: Unrelated Suspicious Incidents (DMZ Scan vs Internal DB Spray)
+  Execution Time: 0.18 ms | Events: 4 (3 incident, 1 routine)
+  - Entry Point Status: FALSE_POSITIVE_ENTRY_POINT (sc3-evt-02)
+  - Relevant Event Detection: TP=3, FP=0, FN=0
+  - Unsupported Claims: 0 (Proper forensic restraint maintained)
+  - Unrelated Cluster Isolation: 50.0% (None/2 pairs)
+
+[scenario_missing_conflicting_identifiers] Scenario 4: Missing Session IDs & Conflicting Host Naming
+  Execution Time: 0.09 ms | Events: 2 (2 incident, 0 routine)
+  - Entry Point Status: MISSED_EXPECTED_ENTRY_POINT (sc4-evt-01)
+  - Relevant Event Detection: TP=2, FP=0, FN=0
+  - Unsupported Claims: 0 (Proper forensic restraint maintained)
+
+[scenario_unusual_egress_exfiltration_restraint] Scenario 5: Sensitive Read Followed by Outbound Connection (Exfiltration Restraint)
+  Execution Time: 0.16 ms | Events: 3 (2 incident, 1 routine)
+  - Entry Point Status: FALSE_POSITIVE_ENTRY_POINT (sc5-evt-01)
+  - Relevant Event Detection: TP=2, FP=0, FN=0
+  - Unsupported Claims: 0 (Proper forensic restraint maintained)
+
+[scenario_ambiguous_administrative_anomaly] Scenario 6: Off-Hours Root Firewall Patching (Ambiguous Motive)
+  Execution Time: 0.14 ms | Events: 3 (3 incident, 0 routine)
+  - Entry Point Status: EXACT_MATCH (sc6-evt-02)
+  - Relevant Event Detection: TP=3, FP=0, FN=0
+  - Unsupported Claims: 0 (Proper forensic restraint maintained)
+
+[scenario_held_out_blind_challenge] Scenario 7: Held-Out Blind Challenge (RDP Initial Access -> SMB Lateral Egress)
+  Execution Time: 0.2 ms | Events: 5 (4 incident, 1 routine)
+  - Entry Point Status: EXACT_MATCH (sc7-evt-01)
+  - Relevant Event Detection: TP=4, FP=0, FN=0
+  - Unsupported Claims: 0 (Proper forensic restraint maintained)
+  - Unrelated Cluster Isolation: 0.0% (None/1 pairs)
+
+===================================================================================================================

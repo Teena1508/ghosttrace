@@ -1,0 +1,60 @@
+[
+  {
+    "description": "Valid benchmark event for baseline reference",
+    "record": {
+      "event_id": "valid-001",
+      "timestamp": "2026-10-18T12:00:00Z",
+      "event_type": "AUTHENTICATION",
+      "source": "simulated_auth",
+      "original_event_data": { "raw": "baseline" }
+    },
+    "expected_error": null
+  },
+  {
+    "description": "Missing required timestamp field",
+    "record": {
+      "event_id": "malformed-missing-time",
+      "event_type": "PROCESS_EXECUTION",
+      "source": "simulated_sysmon",
+      "original_event_data": { "raw": "missing timestamp" }
+    },
+    "expected_error": "timestamp"
+  },
+  {
+    "description": "Invalid unparseable timestamp format",
+    "record": {
+      "event_id": "malformed-bad-time",
+      "timestamp": "not-a-valid-timestamp-string",
+      "event_type": "FILE_AUDIT",
+      "source": "simulated_auditd",
+      "original_event_data": { "raw": "bad timestamp" }
+    },
+    "expected_error": "timestamp"
+  },
+  {
+    "description": "Missing required original_event_data field (provenance violation)",
+    "record": {
+      "event_id": "malformed-no-provenance",
+      "timestamp": "2026-10-18T12:05:00Z",
+      "event_type": "NETWORK_CONNECTION",
+      "source": "simulated_zeek"
+    },
+    "expected_error": "original_event_data"
+  },
+  {
+    "description": "Invalid event_type enum value",
+    "record": {
+      "event_id": "malformed-bad-type",
+      "timestamp": "2026-10-18T12:10:00Z",
+      "event_type": "NON_EXISTENT_SECURITY_TYPE",
+      "source": "simulated_edr",
+      "original_event_data": { "raw": "bad type" }
+    },
+    "expected_error": "event_type"
+  },
+  {
+    "description": "Malformed non-dict primitive instead of JSON object",
+    "record": "just-a-plain-string-not-a-json-object",
+    "expected_error": "JSON"
+  }
+]
