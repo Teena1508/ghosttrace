@@ -24,6 +24,10 @@ def test_device_scan_endpoint(client: TestClient):
     assert "evidence_graph" in data
     assert "observed_facts" in data
     assert "detection_findings" in data
+    # The UI renders full events (severity, source, raw record), not timeline summaries
+    assert len(data["events"]) > 0
+    for evt in data["events"]:
+        assert evt["severity"] and evt["source"] and "original_event_data" in evt
 
 
 def test_device_scan_with_test_threat_probe(client: TestClient):

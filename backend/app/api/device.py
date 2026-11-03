@@ -38,6 +38,13 @@ class DeviceScanRequest(BaseModel):
     test_probe_type: Optional[str] = Field(default="reverse_shell", description="reverse_shell, credential_dump, or crypto_miner")
 
 
+class DeviceScanResponse(InvestigationReconstructionResult):
+    events: List[SecurityEvent] = Field(
+        default_factory=list,
+        description="Normalized host events analyzed by the scan (the timeline only carries summaries)",
+    )
+
+
 @router.get("/status", response_model=DeviceStatusResponse)
 async def get_device_status() -> DeviceStatusResponse:
     """Returns live hardware, OS, and process summary for the local device."""
@@ -48,8 +55,8 @@ async def get_device_status() -> DeviceStatusResponse:
         raise HTTPException(status_code=500, detail=f"Failed to query device status: {exc}")
 
 
-@router.post("/scan", response_model=InvestigationReconstructionResult)
-async def scan_device(request: Optional[DeviceScanRequest] = None) -> InvestigationReconstructionResult:
+@router.post("/scan", response_model=DeviceScanResponse)
+async def scan_device(request: Optional[DeviceScanRequest] = None) -> DeviceScanResponse:
     """
     Performs a live forensic telemetry collection and threat detection scan across
     running processes, active network connections, and startup persistence items on this device.
@@ -93,7 +100,7 @@ async def scan_device(request: Optional[DeviceScanRequest] = None) -> Investigat
 
         # Run attack timeline reconstruction & detection rules
         recon_result = reconstruct_attack_timeline(events)
-        return recon_result
+        return DeviceScanResponse(**dict(recon_result), events=events)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to scan device telemetry: {exc}")
 

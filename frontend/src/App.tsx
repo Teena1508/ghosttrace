@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type {
   CytoscapeElement,
   HealthResponse,
@@ -31,6 +31,7 @@ import { ChallengeEvaluationView } from './components/ChallengeEvaluationView';
 import { JudgeDemonstrationView } from './components/JudgeDemonstrationView';
 import { LogImportModal } from './components/LogImportModal';
 import { DetectionsView } from './components/DetectionsView';
+import { WorkspaceErrorBoundary } from './components/WorkspaceErrorBoundary';
 
 export const App: React.FC = () => {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -88,19 +89,20 @@ export const App: React.FC = () => {
     return sc ? sc.name : currentScenarioId;
   }, [scenarios, currentScenarioId, importedDatasetMeta]);
 
-  // Load scenarios + health on mount, then keep health alive with a heartbeat
-  useEffect(() => {
-    // Initial fetch of device status + scenarios + health
-    fetchDeviceStatus().then(setDeviceStatus).catch(console.warn);
-    fetchHealth().then(setHealth).catch(() => setHealth(null));
+  const isBackendOnline = health !== null;
+  const usingFallbackScenarios = useRef(false);
+
+  const loadScenarios = useCallback(() => {
     fetchScenarios()
       .then((res) => {
         if (Array.isArray(res) && res.length > 0) {
+          usingFallbackScenarios.current = false;
           setScenarios(res);
         }
       })
       .catch((err) => {
         console.warn('Scenarios endpoint unavailable, using defaults:', err);
+        usingFallbackScenarios.current = true;
         setScenarios([
           {
             id: 'live_device',
@@ -111,15 +113,24 @@ export const App: React.FC = () => {
           },
         ]);
       });
+  }, []);
 
-    // Heartbeat: poll /health every 15s to keep the status badge live
+  // Initial fetch of device status + scenarios + health
+  useEffect(() => {
+    fetchDeviceStatus().then(setDeviceStatus).catch(console.warn);
+    fetchHealth().then(setHealth).catch(() => setHealth(null));
+    loadScenarios();
+  }, [loadScenarios]);
+
+  // Heartbeat: poll /health every 15s while online, every 3s while reconnecting
+  useEffect(() => {
     const heartbeat = setInterval(() => {
       fetchHealth()
         .then(setHealth)
         .catch(() => setHealth(null));
-    }, 15000);
+    }, isBackendOnline ? 15000 : 3000);
     return () => clearInterval(heartbeat);
-  }, []);
+  }, [isBackendOnline]);
 
   // Dedicated Live Host Scanner
   const handleScanDevice = useCallback(async (includeProbe: boolean = false, probeType: string = 'reverse_shell') => {
@@ -146,9 +157,8 @@ export const App: React.FC = () => {
       } else {
         setGraphElements([]);
       }
-      // TimelineEvent objects are used directly — they contain event_id, is_suspicious, etc.
-      const timelineEvents = (reconResult.timeline || []).filter((te: any) => te != null);
-      setEvents(timelineEvents as any);
+      // Full SecurityEvents (severity, source, raw record) — timeline entries are only summaries
+      setEvents(reconResult.events || []);
 
       if (reconResult.detection_findings && reconResult.detection_findings.length > 0) {
         setActiveTab('detections');
@@ -239,6 +249,16 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadScenarioData(currentScenarioId);
   }, [currentScenarioId, loadScenarioData]);
+
+  // When the backend comes back online after a failed load, recover without a manual reload
+  const wasBackendOnline = useRef(isBackendOnline);
+  useEffect(() => {
+    const reconnected = isBackendOnline && !wasBackendOnline.current;
+    wasBackendOnline.current = isBackendOnline;
+    if (!reconnected) return;
+    if (usingFallbackScenarios.current) loadScenarios();
+    if (error && currentScenarioId !== 'user_imported') loadScenarioData(currentScenarioId);
+  }, [isBackendOnline, error, currentScenarioId, loadScenarios, loadScenarioData]);
 
   // Handler when a scenario is selected
   const handleSelectScenario = (scenarioId: string) => {
@@ -663,12 +683,17 @@ export const App: React.FC = () => {
             <h3>Investigation Engine Notice</h3>
             <p>{error}</p>
             <p className="subtext">
-              Ensure the FastAPI backend is running via <code>python3 -m uvicorn backend.app.main:app --port 8000</code>.
+              <code>npm run dev</code> starts and supervises the backend automatically. To run it by hand:{' '}
+              <code>.venv/bin/python3 -m uvicorn backend.app.main:app --port 8000</code>.
             </p>
           </div>
         )}
 
         {/* Loading Spinner */}
+        <WorkspaceErrorBoundary
+          key={`${activeTab}:${currentScenarioId}:${reconstruction?.investigation_id ?? ''}`}
+          label="This view"
+        >
         {loading ? (
           <div className="loading-state">
             <div className="spinner"></div>
@@ -773,8 +798,20 @@ export const App: React.FC = () => {
             }}
           />
         )}
+        </WorkspaceErrorBoundary>
       </main>
 
+      <WorkspaceErrorBoundary
+        label="This panel"
+        floating
+        onReset={() => {
+          setSelectedNode(null);
+          setSelectedEdge(null);
+          setInspectEvent(null);
+          setIsReportModalOpen(false);
+          setIsImportModalOpen(false);
+        }}
+      >
       {/* Slide-out Evidence & Relationship Inspection Drawer */}
       <EvidenceDetailDrawer
         selectedNode={selectedNode}
@@ -814,6 +851,7 @@ export const App: React.FC = () => {
         onClose={() => setIsImportModalOpen(false)}
         onImportSuccess={handleImportSuccess}
       />
+      </WorkspaceErrorBoundary>
     </div>
   );
 };

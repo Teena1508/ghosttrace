@@ -6,6 +6,7 @@ import type {
   EventListResponse,
   GraphElementsResponse,
   HealthResponse,
+  InvestigationReconstructionResult,
   ValidationResult,
   SecurityEvent,
 } from '../types/event';
@@ -27,10 +28,10 @@ function resolveUrl(path: string): string {
 }
 
 /**
- * Resilient fetch client with automatic direct backend fallback
+ * Fetch with automatic direct backend fallback
  * in case development server proxy returns 502/504 or network error.
  */
-async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+async function fetchOnce(path: string, init?: RequestInit): Promise<Response> {
   const url = resolveUrl(path);
   try {
     const res = await fetch(url, init);
@@ -47,8 +48,42 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
     throw err;
   }
 }
+
+// Backoff schedule (~10s total) covering a backend restart by the dev supervisor or uvicorn --reload
+const RETRY_DELAYS_MS = [500, 1000, 2000, 3000, 3500];
+const RETRYABLE_STATUS = new Set([502, 503, 504]);
+
+export const BACKEND_UNREACHABLE_MESSAGE =
+  'Cannot reach the GhostTrace backend — it may be restarting. Data will reload automatically once it is back online.';
+
+/**
+ * Resilient fetch client: retries network errors and gateway errors while the
+ * backend restarts, then reports a readable error instead of "Failed to fetch".
+ */
+async function apiFetch(
+  path: string,
+  init?: RequestInit,
+  retryDelays: number[] = RETRY_DELAYS_MS
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const canRetry = attempt < retryDelays.length;
+    try {
+      const res = await fetchOnce(path, init);
+      if (!RETRYABLE_STATUS.has(res.status) || !canRetry) {
+        return res;
+      }
+    } catch (err) {
+      if (!canRetry) {
+        throw err instanceof TypeError ? new Error(BACKEND_UNREACHABLE_MESSAGE) : err;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
+  }
+}
+
 export async function fetchHealth(): Promise<HealthResponse> {
-  const res = await apiFetch(`/health`);
+  // No retries: the heartbeat polls on its own schedule and should report offline promptly
+  const res = await apiFetch(`/health`, undefined, []);
   if (!res.ok) {
     throw new Error(`Health check failed with HTTP ${res.status}`);
   }
@@ -75,11 +110,16 @@ export async function fetchDeviceStatus(): Promise<DeviceStatus> {
   return res.json();
 }
 
+export interface DeviceScanResult extends InvestigationReconstructionResult {
+  /** Full normalized host events analyzed by the scan */
+  events: SecurityEvent[];
+}
+
 export async function scanLiveDevice(options?: {
   max_events?: number;
   include_test_probe?: boolean;
   test_probe_type?: string;
-}): Promise<import('../types/event').InvestigationReconstructionResult> {
+}): Promise<DeviceScanResult> {
   const res = await apiFetch(`/api/v1/device/scan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

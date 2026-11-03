@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import psutil
+from pydantic import ValidationError
 
 from investigation_engine.models import (
     EventSeverity,
@@ -32,6 +33,37 @@ from investigation_engine.models import (
 )
 from investigation_engine.detections.rules.execution_rules import SUSPICIOUS_PATTERNS
 from investigation_engine.detections.rules.network_rules import SUSPICIOUS_PORTS
+
+
+def _schema_max_lengths() -> Dict[str, int]:
+    """Reads the max_length constraint of every string field on SecurityEvent."""
+    limits: Dict[str, int] = {}
+    for name, field in SecurityEvent.model_fields.items():
+        for meta in field.metadata:
+            max_len = getattr(meta, "max_length", None)
+            if max_len:
+                limits[name] = max_len
+    return limits
+
+
+_FIELD_MAX_LENGTHS = _schema_max_lengths()
+
+
+def _build_event(**fields: Any) -> Optional[SecurityEvent]:
+    """
+    Builds a SecurityEvent from live host data, clipping over-long strings to the
+    schema limits (real command lines can exceed 4096 chars). The unclipped values
+    stay in original_event_data for provenance. Returns None for a record that is
+    still invalid, so one bad process never fails the whole device scan.
+    """
+    for name, max_len in _FIELD_MAX_LENGTHS.items():
+        value = fields.get(name)
+        if isinstance(value, str) and len(value) > max_len:
+            fields[name] = value[:max_len]
+    try:
+        return SecurityEvent(**fields)
+    except ValidationError:
+        return None
 
 
 class LiveDeviceCollector:
@@ -155,30 +187,30 @@ class LiveDeviceCollector:
                     sev = pattern_sev
                     break
 
-            events.append(
-                SecurityEvent(
-                    event_id=f"host-proc-{pid}",
-                    timestamp=ts,
-                    event_type=EventType.PROCESS_EXECUTION,
-                    host_id=self.hostname,
-                    user_id=user,
-                    process_id=pid,
-                    process_name=name,
-                    command_line=cmdline_str,
-                    action="PROCESS_EXEC",
-                    severity=sev,
-                    is_suspicious=is_suspicious,
-                    source="host_process_telemetry",
-                    original_event_data={
-                        "pid": pid,
-                        "ppid": info.get("ppid"),
-                        "exe": info.get("exe"),
-                        "status": info.get("status"),
-                        "cmdline": info.get("cmdline"),
-                        "create_time": create_time,
-                    },
-                )
+            event = _build_event(
+                event_id=f"host-proc-{pid}",
+                timestamp=ts,
+                event_type=EventType.PROCESS_EXECUTION,
+                host_id=self.hostname,
+                user_id=user,
+                process_id=pid,
+                process_name=name,
+                command_line=cmdline_str,
+                action="PROCESS_EXEC",
+                severity=sev,
+                is_suspicious=is_suspicious,
+                source="host_process_telemetry",
+                original_event_data={
+                    "pid": pid,
+                    "ppid": info.get("ppid"),
+                    "exe": info.get("exe"),
+                    "status": info.get("status"),
+                    "cmdline": info.get("cmdline"),
+                    "create_time": create_time,
+                },
             )
+            if event is not None:
+                events.append(event)
 
         return events
 
@@ -231,28 +263,29 @@ class LiveDeviceCollector:
                     is_suspicious = True
                     sev = SUSPICIOUS_PORTS[port_to_check][2]
 
-                events.append(
-                    SecurityEvent(
-                        event_id=f"host-net-{proto}-{laddr}-{raddr}-{socket_count}",
-                        timestamp=now,
-                        event_type=EventType.NETWORK_CONNECTION,
-                        host_id=self.hostname,
-                        user_id=self.current_user,
-                        source_ip=l_ip or "127.0.0.1",
-                        destination_ip=r_ip,
-                        destination_port=port_to_check,
-                        action=f"TCP_{state}",
-                        severity=sev,
-                        is_suspicious=is_suspicious,
-                        source="host_socket_telemetry",
-                        original_event_data={
-                            "protocol": proto,
-                            "local_address": laddr,
-                            "remote_address": raddr,
-                            "state": state,
-                        },
-                    )
+                event = _build_event(
+                    event_id=f"host-net-{proto}-{laddr}-{raddr}-{socket_count}",
+                    timestamp=now,
+                    event_type=EventType.NETWORK_CONNECTION,
+                    host_id=self.hostname,
+                    user_id=self.current_user,
+                    source_ip=l_ip or "127.0.0.1",
+                    destination_ip=r_ip,
+                    destination_port=port_to_check,
+                    action=f"TCP_{state}",
+                    severity=sev,
+                    is_suspicious=is_suspicious,
+                    source="host_socket_telemetry",
+                    original_event_data={
+                        "protocol": proto,
+                        "local_address": laddr,
+                        "remote_address": raddr,
+                        "state": state,
+                    },
                 )
+                if event is None:
+                    continue
+                events.append(event)
                 socket_count += 1
                 if socket_count >= 100:
                     break
@@ -283,25 +316,26 @@ class LiveDeviceCollector:
                     except Exception:
                         mtime = now
 
-                    events.append(
-                        SecurityEvent(
-                            event_id=f"host-persist-{plist_file.name}-{item_count}",
-                            timestamp=mtime,
-                            event_type=EventType.FILE_AUDIT,
-                            host_id=self.hostname,
-                            user_id=self.current_user,
-                            file_path=str(plist_file),
-                            action="PERSISTENCE_AUDIT",
-                            severity=EventSeverity.INFORMATIONAL,
-                            is_suspicious=False,
-                            source="host_persistence_telemetry",
-                            original_event_data={
-                                "plist_name": plist_file.name,
-                                "path": str(plist_file),
-                                "size_bytes": getattr(stat, "st_size", 0),
-                            },
-                        )
+                    event = _build_event(
+                        event_id=f"host-persist-{plist_file.name}-{item_count}",
+                        timestamp=mtime,
+                        event_type=EventType.FILE_AUDIT,
+                        host_id=self.hostname,
+                        user_id=self.current_user,
+                        file_path=str(plist_file),
+                        action="PERSISTENCE_AUDIT",
+                        severity=EventSeverity.INFORMATIONAL,
+                        is_suspicious=False,
+                        source="host_persistence_telemetry",
+                        original_event_data={
+                            "plist_name": plist_file.name,
+                            "path": str(plist_file),
+                            "size_bytes": getattr(stat, "st_size", 0),
+                        },
                     )
+                    if event is None:
+                        continue
+                    events.append(event)
                     item_count += 1
             except Exception:
                 continue
@@ -313,21 +347,21 @@ class LiveDeviceCollector:
                 try:
                     stat = rc_path.stat()
                     mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
-                    events.append(
-                        SecurityEvent(
-                            event_id=f"host-profile-{shell_rc}",
-                            timestamp=mtime,
-                            event_type=EventType.FILE_AUDIT,
-                            host_id=self.hostname,
-                            user_id=self.current_user,
-                            file_path=str(rc_path),
-                            action="SHELL_CONFIG_AUDIT",
-                            severity=EventSeverity.INFORMATIONAL,
-                            is_suspicious=False,
-                            source="host_persistence_telemetry",
-                            original_event_data={"path": str(rc_path), "size_bytes": stat.st_size},
-                        )
+                    event = _build_event(
+                        event_id=f"host-profile-{shell_rc}",
+                        timestamp=mtime,
+                        event_type=EventType.FILE_AUDIT,
+                        host_id=self.hostname,
+                        user_id=self.current_user,
+                        file_path=str(rc_path),
+                        action="SHELL_CONFIG_AUDIT",
+                        severity=EventSeverity.INFORMATIONAL,
+                        is_suspicious=False,
+                        source="host_persistence_telemetry",
+                        original_event_data={"path": str(rc_path), "size_bytes": stat.st_size},
                     )
+                    if event is not None:
+                        events.append(event)
                 except Exception:
                     pass
 
